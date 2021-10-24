@@ -41,7 +41,31 @@ async function connect() {
 	}
 }
 
-app.get('/', async () => {});
+app.get('/:urlId', async (req, res) => {
+	try {
+		const urlId = req.params.urlId;
+		const server: '5432' | '5433' | '5434' = hr.get(urlId);
+		const result = await clients[server].query('SELECT * FROM url_table where url_id = $1', [
+			urlId,
+		]);
+		if (result.rowCount > 0) {
+			res.send({
+				data: result.rows[0],
+				status: 'success',
+			});
+		} else {
+			res.send({
+				status: 'error',
+				message: 'Not found',
+			});
+		}
+	} catch (err) {
+		res.send({
+			status: 'error',
+			message: err.message,
+		});
+	}
+});
 
 app.post('/', async (req, res) => {
 	try {
@@ -52,9 +76,12 @@ app.post('/', async (req, res) => {
 		const server: '5432' | '5433' | '5434' = hr.get(urlId);
 		await clients[server].query('INSERT INTO url_table(url, url_id) values($1, $2)', [url, urlId]);
 		res.send({
-			urlId,
-			url,
-			server,
+			status: 'success',
+			data: {
+				urlId,
+				url,
+				server,
+			},
 		});
 	} catch (err) {
 		res.send({
